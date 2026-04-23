@@ -1,37 +1,41 @@
 package com.tontoque.sg2hotfix.mixin;
 
-import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent;
-import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipPositioner;
+import net.minecraft.client.StringSplitter;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.util.List;
 
-@Mixin(GuiGraphics.class)
+@Mixin(StringSplitter.class)
 public class TooltipCrashFixMixin {
 
-    @Inject(method = "renderTooltipInternal", at = @At("HEAD"), cancellable = true)
-    private void sg2_hotfix$catchTooltipCrash(Font p_282675_, List<ClientTooltipComponent> p_282615_, int p_283230_, int p_283417_, ClientTooltipPositioner p_282442_, CallbackInfo ci) {
-        if (p_282615_ != null) {
-            for (ClientTooltipComponent component : p_282615_) {
-                if (component == null) continue;
-                
-                try {
-                    // Try to access the width/height, if the inner component is broken it might crash here or during render
-                    component.getWidth(p_282675_);
-                    component.getHeight();
-                } catch (NullPointerException | IllegalArgumentException e) {
-                    GuiGraphics graphics = (GuiGraphics) (Object) this;
-                    // Replace the whole list with a single error component, but since we can't easily modify the list, 
-                    // we just cancel and draw a simple string.
-                    graphics.drawString(p_282675_, "§cTooltip Error: Corrupted Item (NPE Prevented)", p_283230_, p_283417_, 0xFFFFFF);
-                    ci.cancel();
-                    return;
-                }
+    // Inject into StringSplitter.splitLines (m_92384_) which is where the NPE is thrown
+    @Inject(method = "splitLines(Lnet/minecraft/network/chat/FormattedText;ILnet/minecraft/network/chat/Style;)Ljava/util/List;", 
+            at = @At("HEAD"), cancellable = true, require = 0)
+    private void sg2_hotfix$catchStringSplitterNpe(net.minecraft.network.chat.FormattedText text, int maxWidth, net.minecraft.network.chat.Style style, CallbackInfoReturnable<List<net.minecraft.network.chat.FormattedText>> cir) {
+        if (text instanceof Component) {
+            try {
+                // Pre-evaluate the component to see if it causes a NullPointerException in StringDecomposer
+                ((Component) text).getString(); 
+            } catch (NullPointerException | IllegalArgumentException e) {
+                // If it crashes, we cancel the split process and return a safe, pre-formatted error component list
+                cir.setReturnValue(List.of(Component.literal("§cTooltip Error: Corrupted Item (NPE Prevented)")));
+            }
+        }
+    }
+
+    // Secondary target for SRG names in production
+    @Inject(method = "m_92384_", 
+            at = @At("HEAD"), cancellable = true, require = 0, remap = false)
+    private void sg2_hotfix$catchStringSplitterNpeObf(net.minecraft.network.chat.FormattedText text, int maxWidth, net.minecraft.network.chat.Style style, CallbackInfoReturnable<List<net.minecraft.network.chat.FormattedText>> cir) {
+        if (text instanceof Component) {
+            try {
+                ((Component) text).getString(); 
+            } catch (NullPointerException | IllegalArgumentException e) {
+                cir.setReturnValue(List.of(Component.literal("§cTooltip Error: Corrupted Item (NPE Prevented)")));
             }
         }
     }
