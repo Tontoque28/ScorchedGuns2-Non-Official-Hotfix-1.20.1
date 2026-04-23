@@ -1,0 +1,28 @@
+# eclipse
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+JARVIS_BACKUPS/
+
+# idea
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# gradle
+build
+.gradle
+
+# other
+eclipse
+libs
+_JARVIS_MEMORY
+
+
+# Files from Forge MDK
+forge*changelog.txt

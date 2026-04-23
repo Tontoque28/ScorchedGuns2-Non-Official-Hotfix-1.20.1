@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.tontoque.sg2hotfix.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "sg2_tooltip_hotfix.refmap.json",
+  "mixins": [],
+  "client": [
+    "TooltipCrashFixMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
