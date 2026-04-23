@@ -7,43 +7,36 @@ import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.List;
 import java.util.ListIterator;
 
 @Mod.EventBusSubscriber(modid = "sg2_tooltip_hotfix", value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class TooltipSanitizerHandler {
 
+    private static final Component CORRUPTED_TOOLTIP_COMPONENT = Component.literal("§c[Corrupted Tooltip Data]");
+
     @SubscribeEvent
     public static void onTooltip(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
-        if (stack.isEmpty()) return;
-
-        // General Null Check for Scorched Guns or any other mod passing null into the tooltip components list
-        boolean hasCorruptedComponent = false;
-        
-        ListIterator<Component> iterator = event.getToolTip().listIterator();
-        while (iterator.hasNext()) {
-            Component component = iterator.next();
-            if (component == null) {
-                iterator.set(Component.literal("§c[Null Component Removed]"));
-                continue;
-            }
-            
-            try {
-                // Pre-evaluate the string to catch the NullPointerException before ForgeHooksClient does
-                component.getString();
-            } catch (Exception e) {
-                hasCorruptedComponent = true;
-                iterator.set(Component.literal("§c[Corrupted Tooltip Removed]"));
-            }
+        if (stack.isEmpty()) {
+            return;
         }
 
-        // Specific handling for Scorched Guns 2 items missing expected NBT
-        // (Assuming the mod uses "scorchedguns" as its namespace, update if it's "sg2" etc.)
-        if (stack.getItem().getCreatorModId(stack) != null && stack.getItem().getCreatorModId(stack).contains("scorchedguns")) {
-            // Usually the crash happens when NBT is completely null or missing a specific key.
-            if (hasCorruptedComponent || stack.getTag() == null) {
-                 event.getToolTip().add(Component.literal("§4[SG2 Fix]: Blueprint/Item lacks valid NBT."));
-                 event.getToolTip().add(Component.literal("§eDiscard this item to prevent issues."));
+        List<Component> toolTip = event.getToolTip();
+        ListIterator<Component> iterator = toolTip.listIterator();
+
+        while (iterator.hasNext()) {
+            Component component = iterator.next();
+
+            if (component == null) {
+                iterator.set(CORRUPTED_TOOLTIP_COMPONENT);
+                continue;
+            }
+
+            try {
+                component.getString();
+            } catch (Exception e) {
+                iterator.set(CORRUPTED_TOOLTIP_COMPONENT);
             }
         }
     }
